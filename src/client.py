@@ -1,13 +1,12 @@
+import os
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = 'yes'
+
 import pygame
 from pygame.locals import *
-import os
 import time
 import sys
-import UI
-
+import ui
 import socket
-
-
 
 class Server(object):
     def __init__(self, host, port):
@@ -70,7 +69,7 @@ if __name__ == '__main__':
     print("游戏开始后请勿关闭本窗口,可以最小化")
 
     pygame.init()
-    setting = UI.Setting()
+    setting = ui.Setting()
     for i in ['East', 'West', 'South', 'North']:
         if role == i[0]:
             setting.real_role = i
@@ -81,8 +80,11 @@ if __name__ == '__main__':
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
     screen = pygame.display.set_mode(SIZE, RESIZABLE)
     pygame.display.set_caption("升级")
+    
+    icon = pygame.image.load("../data/ico/poker.png")
+    pygame.display.set_icon(icon) 
 
-    background = UI.Background(screen, setting)
+    background = ui.Background(screen, setting)
     me = background.players['South']
 
     # (main loop)
