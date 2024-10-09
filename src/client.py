@@ -7,30 +7,6 @@ import ui
 
 import socket
 
-
-
-class Server(object):
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
-        self.s = socket.socket()
-        self.s.setblocking(False)
-        self.s.connect((host, port))
-
-    def rcv(self):
-        try:
-            data = self.s.recv(1024)
-            if data:
-                pass
-        except socket.error as e:
-            if e.errno == socket.errno.EWOULDBLOCK:
-                # 没有数据可接收，继续执行其他任务
-                pass
-            else:
-                # 其他错误，进行相应的处理
-                pass
-
-
 # flags
 WAITING = 0
 ADDCARD = 1
