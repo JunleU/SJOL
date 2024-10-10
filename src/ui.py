@@ -12,7 +12,7 @@ class Setting(object):
         self.SCREEN_WIDTH = 1400
         self.SCREEN_HEIGHT = 800
 
-        self.puke_backface_image = '../data/image/poker/back.png'
+        self.puke_backface_image = '../res/image/poker/back.png'
 
         self.scale_puke = 2
         self.scale_puke_back = 2
@@ -42,7 +42,7 @@ class Setting(object):
         else:
             face_image = face
 
-        face_image = '../data/image/poker/' + face_image + '.png'
+        face_image = '../res/image/poker/' + face_image + '.png'
         image = pygame.image.load(face_image)
         rect = image.get_rect()
         width, height = rect.width * self.scale_puke, rect.height * self.scale_puke
@@ -192,7 +192,7 @@ class Background(object):
         self.screen.blit(textSurface, textRect)
 
     def text_image(self, text, color, size):
-        font = pygame.font.Font('../data/font/xs.otf', size)
+        font = pygame.font.Font('../res/font/xs.otf', size)
         textSurface = font.render(text, True, color)
         return textSurface
 
@@ -597,6 +597,8 @@ def play_game():
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("升级")
+    icon = pygame.image.load("../res/ico/poker.png")
+    pygame.display.set_icon(icon)
 
     background = Background(screen, setting)
     # (main loop)

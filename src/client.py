@@ -1,6 +1,8 @@
+import os
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = 'yes'
+
 import pygame
 from pygame.locals import *
-import os
 import time
 import sys
 import ui
@@ -19,7 +21,7 @@ if __name__ == '__main__':
         role = input("请正确输入您的座位(E/W/S/N):")
 
     s = socket.socket()
-    with open('../data/host', 'r') as hostfile:
+    with open('../res/host', 'r') as hostfile:
         host = dft_host = hostfile.readline().replace('\r','').replace('\n','')
         port = hostfile.readline()
         port = dft_port = int(port)
@@ -57,6 +59,9 @@ if __name__ == '__main__':
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
     screen = pygame.display.set_mode(SIZE, RESIZABLE)
     pygame.display.set_caption("升级")
+    
+    icon = pygame.image.load("../res/ico/poker.png")
+    pygame.display.set_icon(icon) 
 
     background = ui.Background(screen, setting)
     me = background.players['South']
