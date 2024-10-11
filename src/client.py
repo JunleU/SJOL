@@ -19,9 +19,10 @@ if __name__ == '__main__':
     role = input("请选择您的座位(E/W/S/N):")
     while role not in ['E','W','S','N','e','w','s','n']:
         role = input("请正确输入您的座位(E/W/S/N):")
+    role = role.upper()
 
     s = socket.socket()
-    with open('../res/host', 'r') as hostfile:
+    with open('../conf/host', 'r') as hostfile:
         host = dft_host = hostfile.readline().replace('\r','').replace('\n','')
         port = hostfile.readline()
         port = dft_port = int(port)
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     screen = pygame.display.set_mode(SIZE, RESIZABLE)
     pygame.display.set_caption("升级")
     
-    icon = pygame.image.load("../res/ico/poker.png")
+    icon = pygame.image.load("../resources/icons/poker.png")
     pygame.display.set_icon(icon) 
 
     background = ui.Background(screen, setting)
@@ -82,6 +83,8 @@ if __name__ == '__main__':
 
     turn = roles.index(background.master[0])
     s.setblocking(False)
+    showed_cards = []
+    outed_cards = []
     while True:
         slp = True
         for event in pygame.event.get():
@@ -99,29 +102,43 @@ if __name__ == '__main__':
                 if flag == GOING and not cleaned:
                     if background.buttons['出'].able:
                         if background.buttons['出'].rect.collidepoint(event.pos):
-                            background.turn_over()
-                            cleaned = True
+                            for card in me.cards:
+                                if card.selected:
+                                    background.turn_over()
+                                    cleaned = True
+                                    break
                 f = background.click(event.pos)
                 if f == 1: # 1-Buttons
                     if flag == GOING:
-                        for card in me.out_cards:
-                            msg = role
-                            msg += chr(setting.card_dir.index(card.face))
-                            s.send(msg.encode("UTF-8"))
-                        msg = role+chr(54)
-                        s.send(msg.encode("UTF-8"))
-
-                        turn += 1
-                        out_num = len(background.players['South'].out_cards)
+                        out_num = len(me.out_cards)
                         if out_num > 0:
-                            cleaned = False
-                            for r in ['East', 'North', 'West']:
-                                if len(background.players[r].out_cards) != out_num:
-                                    cleaned = True
-                                    break
+                            send_num = 0
+                            for card in me.out_cards:
+                                if card in outed_cards:
+                                    continue
+                                outed_cards.append(card)
+                                msg = role
+                                msg += chr(setting.card_dir.index(card.face))
+                                s.send(msg.encode("UTF-8"))
+                                send_num += 1
+
+                            if send_num > 0:
+                                msg = role+chr(54)
+                                s.send(msg.encode("UTF-8"))
+
+                                turn += 1
+                                if out_num > 0:
+                                    cleaned = False
+                                    for r in ['East', 'North', 'West']:
+                                        if len(background.players[r].out_cards) != out_num:
+                                            cleaned = True
+                                            break
 
                     elif flag == ADDCARD:
                         for card in me.out_cards:
+                            if card in showed_cards:
+                                continue
+                            showed_cards.append(card)
                             msg = role
                             msg += chr(setting.card_dir.index(card.face))
                             s.send(msg.encode("UTF-8"))
@@ -198,6 +215,8 @@ if __name__ == '__main__':
             elif flag != ADDCARD and data == 'ac':
                 flag = ADDCARD
                 turn = roles.index(background.master[0])
+                showed_cards = []
+                outed_cards = []
                 background.initial()
                 background.blitme()
                 for b in background.buttons.values():
@@ -239,12 +258,14 @@ if __name__ == '__main__':
             elif flag == GOING and data == 'ge':
                 background.turn_over()
                 background.db = True
+                for b in background.buttons.values():
+                    b.disable()
                 background.blitme()
                 flag = WAITING
             elif flag == GOING and data[0] in roles:
                 if ord(data[1]) == 54:
                     turn += 1
-                    out_num = len(background.players['South'].out_cards)
+                    out_num = len(me.out_cards)
                     # print(out_num)
                     if out_num > 0:
                         cleaned = False

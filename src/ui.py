@@ -12,7 +12,7 @@ class Setting(object):
         self.SCREEN_WIDTH = 1400
         self.SCREEN_HEIGHT = 800
 
-        self.puke_backface_image = '../res/image/poker/back.png'
+        self.puke_backface_image = '../resources/images/poker/back.png'
 
         self.scale_puke = 2
         self.scale_puke_back = 2
@@ -42,7 +42,7 @@ class Setting(object):
         else:
             face_image = face
 
-        face_image = '../res/image/poker/' + face_image + '.png'
+        face_image = '../resources/images/poker/' + face_image + '.png'
         image = pygame.image.load(face_image)
         rect = image.get_rect()
         width, height = rect.width * self.scale_puke, rect.height * self.scale_puke
@@ -192,7 +192,7 @@ class Background(object):
         self.screen.blit(textSurface, textRect)
 
     def text_image(self, text, color, size):
-        font = pygame.font.Font('../res/font/xs.otf', size)
+        font = pygame.font.Font('../resources/fonts/xs.otf', size)
         textSurface = font.render(text, True, color)
         return textSurface
 
@@ -484,7 +484,7 @@ class Player(object):
     def show_cards(self, face='NO'):
         if self.role == 'South':
             for card in self.cards.copy():
-                if card.selected:
+                if card.selected and card not in self.out_cards:
                     self.out_cards.append(card)
                     self.out_cards[-1].selected = False
                     self.cards[self.cards.index(card)].selected = False
@@ -597,7 +597,7 @@ def play_game():
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
     pygame.display.set_caption("升级")
-    icon = pygame.image.load("../res/ico/poker.png")
+    icon = pygame.image.load("../resources/icons/poker.png")
     pygame.display.set_icon(icon)
 
     background = Background(screen, setting)

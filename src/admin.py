@@ -74,7 +74,7 @@ card_dir.append('JK')
 if __name__ == '__main__':
     conn = socket.socket()
     s = socket.socket()
-    with open('../res/host', 'r') as hostfile:
+    with open('../conf/host', 'r') as hostfile:
         host = hostfile.readline().replace('\r', '').replace('\n', '')
         port = hostfile.readline()
         port = int(port)
