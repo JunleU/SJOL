@@ -1,6 +1,7 @@
 import random
 import time
 import socket
+import configparser
 
 # H S D C
 # Heart Spade Diamond Club
@@ -72,14 +73,24 @@ card_dir.append('jk')
 card_dir.append('JK')
 
 if __name__ == '__main__':
+    config = configparser.ConfigParser()
+    config.read("../conf/config.ini", encoding='utf-8')
+
     conn = socket.socket()
-    s = socket.socket()
-    with open('../conf/host', 'r') as hostfile:
-        host = hostfile.readline().replace('\r', '').replace('\n', '')
-        port = hostfile.readline()
-        port = int(port)
-    conn.connect((host, port))
-    print('Connected')
+    host = dft_host = config['Socket']['Host']
+    port = dft_port = config['Socket'].getint('Port')
+
+    while True:
+        print("连接中")
+        try:
+            conn.connect((host, port))
+            break
+        except Exception as e:
+            print(e)
+            host = input("请输入服务器地址:")
+            port = input("请输入服务器端口:")
+            port = int(port)
+    print('连接成功')
     #s = input()
 
     while True:

@@ -6,6 +6,7 @@ from pygame.locals import *
 import time
 import sys
 import ui
+import configparser
 
 import socket
 
@@ -21,11 +22,12 @@ if __name__ == '__main__':
         role = input("请正确输入您的座位(E/W/S/N):")
     role = role.upper()
 
+    config = configparser.ConfigParser()
+    config.read("../conf/config.ini", encoding='utf-8')
+
     s = socket.socket()
-    with open('../conf/host', 'r') as hostfile:
-        host = dft_host = hostfile.readline().replace('\r','').replace('\n','')
-        port = hostfile.readline()
-        port = dft_port = int(port)
+    host = dft_host = config['Socket']['Host']
+    port = dft_port = config['Socket'].getint('Port')
 
     while True:
         print("连接中")
@@ -85,13 +87,66 @@ if __name__ == '__main__':
     s.setblocking(False)
     showed_cards = []
     outed_cards = []
+    temp_down_cards = []
     while True:
         slp = True
+        key_state = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
-                sys.exit()
+            elif event.type == pygame.KEYDOWN and event.key == K_LEFT:
+                tmp_fm = tmp_f = 0
+                for i in range(len(me.cards)):
+                    if i == 0:
+                        if me.cards[i].selected:
+                            tmp_f = 1
+                        continue
+                    if me.cards[i].selected:
+                        if tmp_f == 1:
+                            continue
+                        tmp_fm = 1
+                        temp_card = me.cards.pop(i)
+                        me.cards.insert(i - 1, temp_card)
+                    else:
+                        if tmp_f == 1:
+                            tmp_f = 0
+                if tmp_fm == 1:
+                    background.blitme()
+            elif event.type == pygame.KEYDOWN and event.key == K_RIGHT:
+                tmp_card_n = len(me.cards)
+                tmp_fm = tmp_f = 0 # 是否发生移动，边缘是否选中
+                for i in range(tmp_card_n):
+                    if i == 0:
+                        if me.cards[tmp_card_n - i - 1].selected:
+                            tmp_f = 1
+                            continue
+                        continue
+                    if me.cards[tmp_card_n - i - 1].selected:
+                        if tmp_f == 1:
+                            continue
+                        tmp_fm = 1
+                        temp_card = me.cards.pop(tmp_card_n - i - 1)
+                        me.cards.insert(tmp_card_n - i, temp_card)
+                    else:
+                        if tmp_f == 1:
+                            tmp_f = 0
+                if tmp_fm == 1:
+                    background.blitme()
+            elif event.type == pygame.KEYDOWN and event.key == K_DOWN:
+                temp_down_cards = []
+                for card in me.cards:
+                    if card.selected:
+                        tmp_f = 1
+                        temp_down_cards.append(card)
+                        card.selected = False
+                if len(temp_down_cards) > 0:
+                    background.blitme()
+            elif event.type == pygame.KEYDOWN and event.key == K_UP:
+                if len(temp_down_cards) > 0:
+                    for card in temp_down_cards:
+                        card.selected = True
+                    temp_down_cards = []
+                    background.blitme()
             elif event.type == VIDEORESIZE:
                 size = event.size
                 background.resize(size)
@@ -158,7 +213,7 @@ if __name__ == '__main__':
                         background.blitme()
                         turn = 0
 
-                elif f == 0 and pygame.key.get_pressed()[pygame.K_LCTRL]: # 2-text
+                elif f == 0 and key_state[pygame.K_LCTRL]: # 2-text
                     if background.textRects['l1'].collidepoint(event.pos):
                         if event.button == 1:
                             s.send('l1'.encode("UTF-8"))
@@ -184,7 +239,6 @@ if __name__ == '__main__':
                         msg = 'm' + role[0]
                         s.send(msg.encode("UTF-8"))
                         background.make_master(role)
-
 
 
         try:

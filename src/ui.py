@@ -1,6 +1,7 @@
 import pygame
 import os
 import sys
+import configparser
 
 # (D,C,H,S) + (A,2,3,4,5,6,7,8,9,0,J,Q,K)   用"jk"、"JK"分别表示小王、大王
 # 黑桃-spade 红桃-heart 方快-diamond 草花-club
@@ -9,8 +10,14 @@ class Setting(object):
 
     def __init__(self):
         super(Setting, self).__init__()
+
         self.SCREEN_WIDTH = 1400
         self.SCREEN_HEIGHT = 800
+
+        config = configparser.ConfigParser()
+        config.read("../conf/config.ini", encoding='utf-8')
+        # print(config.sections())
+        self.ascend_order = config['Pref'].getboolean('AscendingOrder')
 
         self.puke_backface_image = '../resources/images/poker/back.png'
 
@@ -103,9 +110,15 @@ class Background(object):
 
     # add a card in a player
     def add_card(self, card, turn):
-        pygame.time.wait(10)
+        pygame.time.wait(4)
         role = self.roles[turn]
+        if not self.setting.ascend_order:
+            self.players[role].cards.reverse()
+
         self.players[role].add_card(card)
+
+        if not self.setting.ascend_order:
+            self.players[role].cards.reverse()
 
         self.blitme()
 
