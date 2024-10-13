@@ -2,29 +2,34 @@ import pygame
 import os
 import sys
 import configparser
+import ctypes
+
 
 # (D,C,H,S) + (A,2,3,4,5,6,7,8,9,0,J,Q,K)   用"jk"、"JK"分别表示小王、大王
 # 黑桃-spade 红桃-heart 方快-diamond 草花-club
 class Setting(object):
     """docstring for Setting"""
-
-    def __init__(self):
+    def __init__(self, display_width, display_height):
         super(Setting, self).__init__()
 
-        self.SCREEN_WIDTH = 1400
-        self.SCREEN_HEIGHT = 800
+        self.SCREEN_WIDTH = int(display_width*7/8)
+        self.SCREEN_HEIGHT = int(display_height*7/8)
 
         config = configparser.ConfigParser()
         config.read("../conf/config.ini", encoding='utf-8')
         # print(config.sections())
         self.ascend_order = config['Pref'].getboolean('AscendingOrder')
 
-        self.puke_backface_image = '../resources/images/poker/back.png'
+        self.poker_backface_image = '../resources/images/poker/back.png'
 
-        self.scale_puke = 2
-        self.scale_puke_back = 2
+        #self.scale_poker = 0.2
+        self.scale_bpoker = 0.6
+        self.poker_height = int(display_height/6)
+        self.text_size = int(display_height/30)
+        self.button_size = int(display_height/24)
+        
 
-        self.cards_gap = 500 / 12
+        self.cards_gap = 720 / 12
         self.real_role = 'South'
 
         colors = ('H', 'S', 'D', 'C')
@@ -33,11 +38,14 @@ class Setting(object):
         self.card_dir.append('jk')
         self.card_dir.append('JK')
 
-    def load_puke_backface_image(self):
-        image = pygame.image.load(self.puke_backface_image)
+    def load_poker_backface_image(self):
+        image = pygame.image.load(self.poker_backface_image)
         rect = image.get_rect()
-        width, height = rect.width * self.scale_puke_back, rect.height * self.scale_puke_back
-        image = pygame.transform.scale(image, (int(width), int(height)))
+        height = self.poker_height
+        width = int(rect.width * height / rect.height)
+        self.poker_width = width
+        #width, height = rect.width * self.scale_poker_back, rect.height * self.scale_poker_back
+        image = pygame.transform.scale(image, (width, height))
         image = pygame.transform.rotate(image, 90)
         return image
 
@@ -52,11 +60,16 @@ class Setting(object):
         face_image = '../resources/images/poker/' + face_image + '.png'
         image = pygame.image.load(face_image)
         rect = image.get_rect()
-        width, height = rect.width * self.scale_puke, rect.height * self.scale_puke
-        image = pygame.transform.scale(image, (int(width), int(height)))
+        height = self.poker_height
+        #width = int(rect.width * height / rect.height)
+        width = self.poker_width
+        #width, height = rect.width * self.scale_poker, rect.height * self.scale_poker
+        image = pygame.transform.scale(image, (width, height))
         # counterclockwise rotation
-        if role == 'East' or role == 'West':
+        if role == 'East':
             angle = 90
+        elif role == 'West':
+            angle = 270
         else:
             angle = 0
         image = pygame.transform.rotate(image, angle)
@@ -71,7 +84,7 @@ class Background(object):
         self.width = setting.SCREEN_WIDTH
         self.height = setting.SCREEN_HEIGHT
 
-        self.image_backface = setting.load_puke_backface_image()
+        self.image_backface = setting.load_poker_backface_image()
         self.rect_backface = self.image_backface.get_rect()
         self.back_num = 4
 
@@ -188,8 +201,9 @@ class Background(object):
         # pygame.display.update()
 
     def draw_level(self):
+        size = self.setting.text_size
         text = '东西: ' + str(self.level1)
-        textSurface = self.text_image(text, (255, 0, 0), 30)
+        textSurface = self.text_image(text, (255, 0, 0), size)
         textRect = textSurface.get_rect()
         textRect.top = 5
         textRect.left = 5
@@ -197,9 +211,9 @@ class Background(object):
         self.screen.blit(textSurface, textRect)
 
         text = '南北: ' + str(self.level2)
-        textSurface = self.text_image(text, (255, 0, 0), 30)
+        textSurface = self.text_image(text, (255, 0, 0), size)
         textRect = textSurface.get_rect()
-        textRect.top = 45
+        textRect.top = self.textRects['l1'].bottom + 5
         textRect.left = 5
         self.textRects['l2'] = textRect.copy()
         self.screen.blit(textSurface, textRect)
@@ -210,14 +224,30 @@ class Background(object):
         return textSurface
 
     def draw_point(self):
-        text = '逮分: ' + str(self.point)
-        textSurface = self.text_image(text, (255, 0, 0), 35)
+        size = self.setting.text_size
+        text = '逮'
+        textSurface = self.text_image(text, (255, 0, 0), size)
         textRect = textSurface.get_rect()
-        textRect.top = 20
+        textRect.top = 10
         textRect.right = self.width - 10
-        self.textRects['p'] = textRect.copy()
-
         self.screen.blit(textSurface, textRect)
+
+        text = '分'
+        temp_top = textRect.bottom
+        textSurface = self.text_image(text, (255, 0, 0), size)
+        textRect = textSurface.get_rect()
+        textRect.top = temp_top
+        textRect.right = self.width - 10
+        self.screen.blit(textSurface, textRect)
+
+        text = str(self.point)
+        temp_top = textRect.bottom
+        textSurface = self.text_image(text, (255, 0, 0), size)
+        textRect = textSurface.get_rect()
+        textRect.top = temp_top
+        textRect.right = self.width - 10
+        self.screen.blit(textSurface, textRect)
+        self.textRects['p'] = textRect.copy()
 
     def draw_buttons(self):
         for button in self.buttons.values():
@@ -234,9 +264,10 @@ class Background(object):
         self.screen.blit(textSurface, textRect)
 
     def draw_my_role(self):
+        size = self.setting.text_size * 2
         role_dir = {'E': '东', 'S': '南', 'W': '西', 'N': '北'}
         text = role_dir[self.real_role[0]]
-        textSurface = self.text_image(text, (255, 0, 0), 50)
+        textSurface = self.text_image(text, (255, 0, 0), size)
         textRect = textSurface.get_rect()
         textRect.bottom = self.height - 10
         textRect.left = 30
@@ -244,11 +275,12 @@ class Background(object):
         self.screen.blit(textSurface, textRect)
 
     def draw_master(self):
+        size = self.setting.text_size
         role_dir = {'E': '东', 'S': '南', 'W': '西', 'N': '北'}
         text = '庄:' + role_dir[self.master[0]]
-        textSurface = self.text_image(text, (255, 0, 0), 30)
+        textSurface = self.text_image(text, (255, 0, 0), size)
         textRect = textSurface.get_rect()
-        textRect.top = 85
+        textRect.top = self.textRects['l2'].bottom + 5
         textRect.left = 5
         self.textRects['m'] = textRect.copy()
         self.screen.blit(textSurface, textRect)
@@ -265,7 +297,7 @@ class Background(object):
         #self.screen.blit(self.image, self.rect)
         self.screen.fill((0, 128, 0))
 
-        # draw center puke card
+        # draw center poker card
         self.rect_backface.centerx = self.width/2
         self.rect_backface.centery = self.height/2
         rect_temp = pygame.Rect(self.rect_backface)
@@ -296,12 +328,13 @@ class Button(object):
     def __init__(self, background, text, x, y, func):
         self.background = background
         self.text = text
+        self.size = background.setting.button_size
         self.x = x
         self.y = y
         self.func = func
         self.able = False
 
-        textSurface = self.background.text_image(self.text, (255, 0, 0), 35)
+        textSurface = self.background.text_image(self.text, (255, 0, 0), self.size)
         textRect = textSurface.get_rect()
         textRect.bottom = self.background.height - x
         textRect.right = self.background.width - y
@@ -317,7 +350,7 @@ class Button(object):
     def draw(self):
         if not self.able:
             return
-        textSurface = self.background.text_image(self.text, (255, 0, 0), 35)
+        textSurface = self.background.text_image(self.text, (255, 0, 0), self.size)
         textRect = textSurface.get_rect()
         textRect.bottom = self.background.height - self.x
         textRect.right = self.background.width - self.y
@@ -331,11 +364,11 @@ class Button(object):
             self.func()
             return 1
 
-class Puke(object):
-    """dscreen, settingtring for Puke"""
+class Poker(object):
+    """dscreen, settingtring for Poker"""
 
     def __init__(self, screen, setting, face, role):
-        super(Puke, self).__init__()
+        super(Poker, self).__init__()
         self.screen = screen
         self.face = face
         self.image = setting.load_face_image(face, role)
@@ -354,18 +387,27 @@ class Puke(object):
         if self.selected:
             self.rect.centery -= 25
         self.screen.blit(self.image, self.rect)
+        line_color = (149, 129, 113)  # 红色
+        line_start = (self.rect.left-1, self.rect.top + int(self.rect.height/10))  # 起始点坐标
+        line_end = (self.rect.left-1, self.rect.bottom - int(self.rect.height/10))  # 结束点坐标
+        line_width = 1
+        pygame.draw.line(self.screen, line_color, line_start, line_end, line_width)
 
-class Bpuke(object):
+class Bpoker(object):
     def __init__(self, screen, setting, role):
-        super(Bpuke, self).__init__()
+        super(Bpoker, self).__init__()
         self.screen = screen
-        self.scale = 1
-        self.image = pygame.image.load(setting.puke_backface_image)
+        self.scale = setting.scale_bpoker
+        self.image = pygame.image.load(setting.poker_backface_image)
         rect = self.image.get_rect()
-        width, height = rect.width * self.scale, rect.height * self.scale
+        height = setting.poker_height
+        width = int(rect.width * height / rect.height)
+        width, height = width * self.scale, height * self.scale
         self.image = pygame.transform.scale(self.image, (int(width), int(height)))
-        if role != 'North':
+        if role == 'East':
             self.image = pygame.transform.rotate(self.image, 90)
+        elif role == 'West':
+            self.image = pygame.transform.rotate(self.image, 270)
         self.rect = self.image.get_rect()
 
     def blitme(self, centerx, centery):
@@ -401,10 +443,10 @@ class Player(object):
         self.role = role
         self.cards = []
         self.out_cards = []
-        self.bcard = Bpuke(self.screen, self.setting, self.role)
+        self.bcard = Bpoker(self.screen, self.setting, self.role)
 
         if role != 'South':
-            self.gap /= 2
+            self.gap *= setting.scale_bpoker
 
     def initial(self):
         for card in self.cards:
@@ -416,7 +458,7 @@ class Player(object):
         self.master = False
 
     def add_card(self, face):
-        new_card = Puke(self.screen, self.setting, face, self.role)
+        new_card = Poker(self.screen, self.setting, face, self.role)
 
         colors = ('H', 'S', 'D', 'C')
         nums = ('A', 'K', 'Q', 'J', '0', '9', '8', '7', '6', '4')
@@ -603,7 +645,10 @@ def check_events(background):
 def play_game():
     # Initialize pygame
     pygame.init()
-    setting = Setting()
+    info = pygame.display.Info()
+    display_width = info.current_w
+    display_height = info.current_h
+    setting = Setting(display_width, display_height)
 
     SCREEN_WIDTH, SCREEN_HEIGHT = setting.SCREEN_WIDTH, setting.SCREEN_HEIGHT
     x, y = 150, 60
@@ -612,6 +657,11 @@ def play_game():
     pygame.display.set_caption("升级")
     icon = pygame.image.load("../resources/icons/poker.png")
     pygame.display.set_icon(icon)
+
+    user32 = ctypes.WinDLL('user32')
+    SW_MAXIMISE = 3
+    hWnd = pygame.display.get_wm_info()["window"]
+    user32.ShowWindow(hWnd, SW_MAXIMISE)
 
     background = Background(screen, setting)
     # (main loop)
@@ -623,4 +673,8 @@ def play_game():
 
 
 if __name__ == "__main__":
+    try:  # >= win 8.1
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except:  # win 8.0 or less
+        ctypes.windll.user32.SetProcessDPIAware()
     play_game()

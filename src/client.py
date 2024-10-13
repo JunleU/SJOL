@@ -1,6 +1,12 @@
 import os
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = 'yes'
 
+import ctypes
+try:  # >= win 8.1
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+except:  # win 8.0 or less
+    ctypes.windll.user32.SetProcessDPIAware()
+
 import pygame
 from pygame.locals import *
 import time
@@ -51,7 +57,10 @@ if __name__ == '__main__':
     print("游戏开始后请勿关闭本窗口,可以最小化")
 
     pygame.init()
-    setting = ui.Setting()
+    info = pygame.display.Info()
+    display_width = info.current_w
+    display_height = info.current_h
+    setting = ui.Setting(display_width, display_height)
     for i in ['East', 'West', 'South', 'North']:
         if role == i[0]:
             setting.real_role = i
@@ -64,10 +73,15 @@ if __name__ == '__main__':
     pygame.display.set_caption("升级")
     
     icon = pygame.image.load("../resources/icons/poker.png")
-    pygame.display.set_icon(icon) 
+    pygame.display.set_icon(icon)
 
     background = ui.Background(screen, setting)
     me = background.players['South']
+
+    user32 = ctypes.WinDLL('user32')
+    SW_MAXIMISE = 3
+    hWnd = pygame.display.get_wm_info()["window"]
+    user32.ShowWindow(hWnd, SW_MAXIMISE)
 
     # (main loop)
     background.turn_over()
