@@ -15,10 +15,16 @@ class Setting(object):
         self.SCREEN_WIDTH = int(display_width*7/8)
         self.SCREEN_HEIGHT = int(display_height*7/8)
 
+        self.ascend_order = False
+        self.counter = True
+
         config = configparser.ConfigParser()
         config.read("../conf/config.ini", encoding='utf-8')
         # print(config.sections())
-        self.ascend_order = config['Pref'].getboolean('AscendingOrder')
+        if config.has_option('Pref', 'AscendingOrder'):
+            self.ascend_order = config['Pref'].getboolean('AscendingOrder')
+        if config.has_option('Pref', 'Counter'):
+            self.counter = config['Pref'].getboolean('Counter')
 
         self.poker_backface_image = '../resources/images/poker/back.png'
 
@@ -29,7 +35,7 @@ class Setting(object):
         self.button_size = int(display_height/24)
         
 
-        self.cards_gap = 720 / 12
+        self.cards_gap = display_width / 42
         self.real_role = 'South'
 
         colors = ('H', 'S', 'D', 'C')
@@ -122,15 +128,15 @@ class Background(object):
         self.back_num = 4
 
     # add a card in a player
-    def add_card(self, card, turn):
+    def add_card(self, card, turn=3):
         pygame.time.wait(4)
         role = self.roles[turn]
-        if not self.setting.ascend_order:
+        if turn == 3 and not self.setting.ascend_order:
             self.players[role].cards.reverse()
 
         self.players[role].add_card(card)
 
-        if not self.setting.ascend_order:
+        if turn == 3 and not self.setting.ascend_order:
             self.players[role].cards.reverse()
 
         self.blitme()
@@ -162,12 +168,21 @@ class Background(object):
         self.blitme()
 
     def put_cards(self):
+        tmp_num = 0
+        for card in self.players['South'].cards:
+            if card.selected:
+                tmp_num += 1
+
+        if len(self.bottom_card) + tmp_num > 4:
+            return 1
+
         for card in self.players['South'].cards.copy():
             if card.selected:
                 self.bottom_card.append(card.face)
                 self.players['South'].cards.remove(card)
-
-        self.back_num = 4
+        self.back_num = len(self.bottom_card)
+        self.blitme()
+        return 0
 
     def draw_bottom(self):
         n = len(self.bottom_card)
@@ -188,7 +203,7 @@ class Background(object):
         self.blitme()
 
     def turn_over(self):
-        pygame.time.wait(100)
+        pygame.time.wait(10)
         for player in self.players.values():
             player.del_out_cards()
         self.blitme()
@@ -264,10 +279,10 @@ class Background(object):
         self.screen.blit(textSurface, textRect)
 
     def draw_my_role(self):
-        size = self.setting.text_size * 2
+        size = self.setting.text_size
         role_dir = {'E': '东', 'S': '南', 'W': '西', 'N': '北'}
         text = role_dir[self.real_role[0]]
-        textSurface = self.text_image(text, (255, 0, 0), size)
+        textSurface = self.text_image(text, (255, 0, 0), size * 2)
         textRect = textSurface.get_rect()
         textRect.bottom = self.height - 10
         textRect.left = 30
@@ -284,6 +299,44 @@ class Background(object):
         textRect.left = 5
         self.textRects['m'] = textRect.copy()
         self.screen.blit(textSurface, textRect)
+
+    def draw_cards_num(self):
+        size = int(self.setting.text_size * 2 / 3)
+        tmp_num = self.players['South'].cards_num
+        if tmp_num:
+            text = '(' + str(tmp_num) + ')'
+            textSurface = self.text_image(text, (0, 0, 255), size)
+            textRect = textSurface.get_rect()
+            textRect.left = self.players['South'].num_left
+            textRect.centery = self.players['South'].centery
+            self.screen.blit(textSurface, textRect)
+
+        tmp_num = self.players['East'].cards_num
+        if tmp_num:
+            text = '(' + str(tmp_num) + ')'
+            textSurface = self.text_image(text, (0, 0, 255), size)
+            textRect = textSurface.get_rect()
+            textRect.bottom = self.players['East'].num_bottom
+            textRect.centerx = self.players['East'].centerx
+            self.screen.blit(textSurface, textRect)
+
+        tmp_num = self.players['West'].cards_num
+        if tmp_num:
+            text = '(' + str(tmp_num) + ')'
+            textSurface = self.text_image(text, (0, 0, 255), size)
+            textRect = textSurface.get_rect()
+            textRect.top = self.players['West'].num_top
+            textRect.centerx = self.players['West'].centerx
+            self.screen.blit(textSurface, textRect)
+
+        tmp_num = self.players['North'].cards_num
+        if tmp_num:
+            text = '(' + str(tmp_num) + ')'
+            textSurface = self.text_image(text, (0, 0, 255), size)
+            textRect = textSurface.get_rect()
+            textRect.right = self.players['North'].num_right
+            textRect.centery = self.players['North'].centery
+            self.screen.blit(textSurface, textRect)
 
     def resize(self, size):
         self.width = size[0]
@@ -312,6 +365,9 @@ class Background(object):
         # draw each player
         for player in self.players.values():
             player.blitme()
+
+        if self.setting.counter:
+            self.draw_cards_num()
 
         # draw level
         self.draw_level()
@@ -387,11 +443,14 @@ class Poker(object):
         if self.selected:
             self.rect.centery -= 25
         self.screen.blit(self.image, self.rect)
+
+        '''
         line_color = (149, 129, 113)  # 红色
         line_start = (self.rect.left-1, self.rect.top + int(self.rect.height/10))  # 起始点坐标
         line_end = (self.rect.left-1, self.rect.bottom - int(self.rect.height/10))  # 结束点坐标
         line_width = 1
         pygame.draw.line(self.screen, line_color, line_start, line_end, line_width)
+        '''
 
 class Bpoker(object):
     def __init__(self, screen, setting, role):
@@ -419,6 +478,11 @@ class Player(object):
     """dscreen, settingtring for Player"""
 
     def __init__(self, screen, setting, role):
+        self.num_right = None
+        self.num_left = None
+        self.num_top = None
+        self.num_bottom = None
+        self.cards_num = 0
         self.screen = screen
         self.setting = setting
         self.gap = setting.cards_gap
@@ -444,9 +508,6 @@ class Player(object):
         self.cards = []
         self.out_cards = []
         self.bcard = Bpoker(self.screen, self.setting, self.role)
-
-        if role != 'South':
-            self.gap *= setting.scale_bpoker
 
     def initial(self):
         for card in self.cards:
@@ -516,6 +577,8 @@ class Player(object):
     def click_card(self, pos):
         n = len(self.cards)
         for i in range(n):
+            if self.cards[n-i-1] in self.out_cards:
+                continue
             if self.cards[n-i-1].rect.collidepoint(pos):
                 self.cards[n - i - 1].click()
                 return 1
@@ -530,21 +593,25 @@ class Player(object):
                     self.out_cards[-1].selected = False
         else:
             for card in self.cards.copy():
+                if card in self.out_cards:
+                    continue
                 if card.face == face:
                     self.out_cards.append(card)
-                    self.cards.remove(card)
+                    #self.cards.remove(card)
                     return
             print('Wrong cards!!!')
 
     def show_cards(self, face='NO'):
         if self.role == 'South':
             for card in self.cards.copy():
-                if card.selected and card not in self.out_cards:
+                if card.selected:
                     self.out_cards.append(card)
+                    self.cards.remove(card)
                     self.out_cards[-1].selected = False
-                    self.cards[self.cards.index(card)].selected = False
         else:
             for card in self.cards.copy():
+                if card in self.out_cards:
+                    continue
                 if card.face == face:
                     self.out_cards.append(card)
                     return
@@ -552,6 +619,10 @@ class Player(object):
 
     def del_out_cards(self):
         for card in self.out_cards:
+            try:
+                self.cards.remove(card)
+            except ValueError:
+                pass
             del card
         self.out_cards = []
 
@@ -582,51 +653,64 @@ class Player(object):
         """
         # draw cards in hand of each player
         n = len(self.cards)
+        if self.role != 'South':
+            for card in self.cards:
+                if card in self.out_cards:
+                    n -= 1
+        self.cards_num = n
+        tmp_flag = 1
         if self.role == 'South':
             x1 = (2 * self.centerx - (n - 1) * self.gap) / 2
-            for a in range(n):
-                self.cards[a].blitme(x1, self.centery)
+            #tmp_left = None
+            for card in self.cards:
+                card.blitme(x1, self.centery)
+                #tmp_left = card.rect.right
                 x1 += self.gap
+            if n:
+                self.num_left = card.rect.right
         elif self.role == 'West':
-            y1 = (2 * self.centery - (n - 1) * self.gap) / 2
+            y1 = (2 * self.centery - (n - 1) * self.gap * self.setting.scale_bpoker) / 2
             for a in range(n):
                 self.bcard.blitme(self.centerx, y1)
-                y1 += self.gap
+                y1 += self.gap * self.setting.scale_bpoker
+            self.num_top = self.bcard.rect.bottom
         elif self.role == 'East':
-            yn = (2 * self.centery + (n - 1) * self.gap) / 2
+            yn = (2 * self.centery + (n - 1) * self.gap * self.setting.scale_bpoker) / 2
             for a in range(n):
                 self.bcard.blitme(self.centerx, yn)
-                yn -= self.gap
+                yn -= self.gap * self.setting.scale_bpoker
+            self.num_bottom = self.bcard.rect.top
         else:
-            xn = (2 * self.centerx + (n - 1) * self.gap) / 2
+            xn = (2 * self.centerx + (n - 1) * self.gap * self.setting.scale_bpoker) / 2
             for a in range(n):
                 self.bcard.blitme(xn, self.centery)
-                xn -= self.gap
+                xn -= self.gap * self.setting.scale_bpoker
+            self.num_right = self.bcard.rect.left
 
         # draw the cards pushing out
         m = len(self.out_cards)
         if m == 0:
             return
         if self.role == 'West':
-            y = (2 * self.centery - (m - 1) * self.gap * 2) / 2
+            y = (2 * self.centery - (m - 1) * self.gap) / 2
             for a in range(m):
                 self.out_cards[a].blitme(self.out_centerx, y)
-                y += self.gap * 2
+                y += self.gap
         elif self.role == 'East':
-            y = (2 * self.centery + (m - 1) * self.gap*2) / 2
+            y = (2 * self.centery + (m - 1) * self.gap) / 2
             for a in range(m):
                 self.out_cards[a].blitme(self.out_centerx, y)
-                y -= self.gap*2
+                y -= self.gap
         elif self.role == 'South':
             x = (2 * self.centerx - (m - 1) * self.gap) / 2
             for a in range(m):
                 self.out_cards[a].blitme(x, self.out_centery)
                 x += self.gap
         else:
-            x = (2 * self.centerx + (m - 1) * self.gap*2) / 2
+            x = (2 * self.centerx + (m - 1) * self.gap) / 2
             for a in range(m):
                 self.out_cards[a].blitme(x, self.out_centery)
-                x -= self.gap*2
+                x -= self.gap
 
 def check_events(background):
     """Respond to keypresses and mouse events."""

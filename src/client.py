@@ -32,8 +32,13 @@ if __name__ == '__main__':
     config.read("../conf/config.ini", encoding='utf-8')
 
     s = socket.socket()
-    host = dft_host = config['Socket']['Host']
-    port = dft_port = config['Socket'].getint('Port')
+    host = dft_host = 'shengji.bilibil.eu.org'
+    port = dft_port = 11451
+
+    if config.has_option('Socket', 'Host'):
+        host = dft_host = config['Socket']['Host']
+    if config.has_option('Socket', 'Port'):
+        port = dft_port = config['Socket'].getint('Port')
 
     while True:
         print("连接中")
@@ -161,6 +166,30 @@ if __name__ == '__main__':
                         card.selected = True
                     temp_down_cards = []
                     background.blitme()
+            elif event.type == pygame.KEYDOWN and event.key == K_z:
+                if flag == GOING and key_state[K_LCTRL]:
+                    tmp_rm_cards = []
+                    for card in me.out_cards:
+                        if card.selected:
+                            tmp_rm_cards.append(card)
+                            try:
+                                outed_cards.remove(card)
+                            except ValueError:
+                                pass
+                    for card in tmp_rm_cards:
+                        me.out_cards.remove(card)
+                        msg = role.lower()
+                        msg += chr(setting.card_dir.index(card.face))
+                        s.send(msg.encode("UTF-8"))
+                        background.add_card(card.face)
+
+                    """
+                    for tmp_c in me.cards:
+                        if tmp_c == card.face:
+                            tmp_c.selected = True
+                    background.blitme()
+                    """
+
             elif event.type == VIDEORESIZE:
                 size = event.size
                 background.resize(size)
@@ -171,11 +200,21 @@ if __name__ == '__main__':
                 if flag == GOING and not cleaned:
                     if background.buttons['出'].able:
                         if background.buttons['出'].rect.collidepoint(event.pos):
-                            for card in me.cards:
-                                if card.selected:
-                                    background.turn_over()
-                                    cleaned = True
-                                    break
+                            out_num = len(me.out_cards)
+                            if out_num > 0:
+                                cleaned = False
+                                for r in ['East', 'North', 'West']:
+                                    if len(background.players[r].out_cards) != out_num:
+                                        cleaned = True
+                                        break
+                            else:
+                                cleaned = True
+                            if not cleaned:
+                                for card in me.cards:
+                                    if card.selected:
+                                        background.turn_over()
+                                        cleaned = True
+                                        break
                 f = background.click(event.pos)
                 if f == 1: # 1-Buttons
                     if flag == GOING:
@@ -218,15 +257,16 @@ if __name__ == '__main__':
                             msg = 'b'
                             msg += chr(setting.card_dir.index(face))
                             s.send(msg.encode("UTF-8"))
-                        s.send('go'.encode("UTF-8"))
-                        flag = GOING
-                        background.back_num = 4
-                        for b in background.buttons.values():
-                            b.disable()
-                        background.buttons['出'].enable()
-                        background.blitme()
-                        turn = 0
 
+                        if len(background.bottom_card) == 4:
+                            s.send('go'.encode("UTF-8"))
+                            flag = GOING
+                            #background.back_num = 4
+                            for b in background.buttons.values():
+                                b.disable()
+                            background.buttons['出'].enable()
+                            background.blitme()
+                            turn = 0
                 elif f == 0 and key_state[pygame.K_LCTRL]: # 2-text
                     if background.textRects['l1'].collidepoint(event.pos):
                         if event.button == 1:
@@ -253,6 +293,34 @@ if __name__ == '__main__':
                         msg = 'm' + role[0]
                         s.send(msg.encode("UTF-8"))
                         background.make_master(role)
+                elif f == 0 and key_state[pygame.K_LALT]:
+                    if background.textRects['l1'].collidepoint(event.pos):
+                        if event.button == 1:
+                            background.update_point(0, 1, 0)
+                        elif event.button == 3:
+                            background.update_point(0, -1, 0)
+                    elif background.textRects['l2'].collidepoint(event.pos):
+                        if event.button == 1:
+                            background.update_point(0, 0, 1)
+                        elif event.button == 3:
+                            background.update_point(0, 0, -1)
+                    elif background.textRects['p'].collidepoint(event.pos):
+                        if event.button == 1:
+                            background.update_point(5, 0, 0)
+                        elif event.button == 3:
+                            background.update_point(-5, 0, 0)
+                    elif background.textRects['m'].collidepoint(event.pos):
+                        background.make_master(role)
+                elif f == 0:
+                    n = len(me.out_cards)
+                    focc_tmp = 0
+                    for i in range(n):
+                        if me.out_cards[n - i - 1].rect.collidepoint(event.pos):
+                            me.out_cards[n - i - 1].selected = not me.out_cards[n - i - 1].selected
+                            focc_tmp = 1
+                            break
+                    if focc_tmp:
+                        background.blitme()
 
 
         try:
@@ -294,7 +362,10 @@ if __name__ == '__main__':
 
             elif flag == ADDCARD and data == 'ae':
                 flag = PUTTING
-                background.turn_over()
+                for card in me.out_cards:
+                    background.add_card(card.face)
+                for player in background.players.values():
+                    player.out_cards = []
                 for b in background.buttons.values():
                     b.disable()
                 if role == background.master[0]:
@@ -348,11 +419,29 @@ if __name__ == '__main__':
                     """
                 else:
                     if not cleaned:
-                        background.turn_over()
-                        cleaned = True
+                        out_num = len(me.out_cards)
+                        if out_num > 0:
+                            cleaned = False
+                            for r in ['East', 'North', 'West']:
+                                if len(background.players[r].out_cards) != out_num:
+                                    cleaned = True
+                                    break
+                        else:
+                            cleaned = True
+                        if not cleaned:
+                            background.turn_over()
+                            cleaned = True
+
                     card = setting.card_dir[ord(data[1])]
                     background.push_cards(card, roles.index(data[0]))
-
+            elif flag == GOING and data[0] in roles.lower():
+                card = setting.card_dir[ord(data[1])]
+                tmp_player = background.players[background.roles[roles.index(data[0].upper())]]
+                for tmp_card in tmp_player.out_cards:
+                    if tmp_card.face == card:
+                        tmp_player.out_cards.remove(tmp_card)
+                        break
+                background.blitme()
             elif flag == PUTTING and data[0] == 'b':
                 # print(ord(data[1]))
                 card = setting.card_dir[ord(data[1])]

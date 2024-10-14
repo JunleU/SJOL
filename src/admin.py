@@ -7,14 +7,14 @@ import configparser
 # Heart Spade Diamond Club
 
 class Admin(object):
-    def __init__(self):
+    def __init__(self, st):
         self.cards = None
         self.players = []
 
         self.level = [0, 0]
 
         self.master = None
-
+        self.sleep_time = st
         self.main_color = None
 
     # 新游戏，初始化
@@ -31,7 +31,7 @@ class Admin(object):
             msg = 'a'
             msg += chr(card_dir.index(cards[i]))
             conn.send(msg.encode("UTF-8"))
-            time.sleep(0.8)
+            time.sleep(self.sleep_time)
         while True:
             data = conn.recv(2)
             if data:
@@ -103,7 +103,10 @@ if __name__ == '__main__':
                     break
         print('New game')
         conn.send('ac'.encode("UTF-8"))
-        admin = Admin()
+
+        config.read("../conf/config.ini", encoding='utf-8')
+        sleep_time = config['Admin'].getfloat('Sleep')
+        admin = Admin(sleep_time)
         admin.new_game(conn)
         #conn.send('go'.encode("UTF-8"))
 
