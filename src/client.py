@@ -109,7 +109,7 @@ if __name__ == '__main__':
     temp_down_cards = []
     while True:
         slp = True
-        key_state = pygame.key.get_pressed()
+        # key_state = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
@@ -166,8 +166,8 @@ if __name__ == '__main__':
                         card.selected = True
                     temp_down_cards = []
                     background.blitme()
-            elif event.type == pygame.KEYDOWN and event.key == K_z:
-                if flag == GOING and key_state[K_LCTRL]:
+            elif event.type == pygame.KEYDOWN and event.key == K_z and (event.mod & pygame.KMOD_CTRL):
+                if flag == GOING:
                     tmp_rm_cards = []
                     for card in me.out_cards:
                         if card.selected:
@@ -267,7 +267,7 @@ if __name__ == '__main__':
                             background.buttons['出'].enable()
                             background.blitme()
                             turn = 0
-                elif f == 0 and key_state[pygame.K_LCTRL]: # 2-text
+                elif f == 0 and pygame.key.get_pressed()[pygame.K_LCTRL]: # 2-text
                     if background.textRects['l1'].collidepoint(event.pos):
                         if event.button == 1:
                             s.send('l1'.encode("UTF-8"))
@@ -293,7 +293,7 @@ if __name__ == '__main__':
                         msg = 'm' + role[0]
                         s.send(msg.encode("UTF-8"))
                         background.make_master(role)
-                elif f == 0 and key_state[pygame.K_LALT]:
+                elif f == 0 and pygame.key.get_pressed()[pygame.K_LALT]:
                     if background.textRects['l1'].collidepoint(event.pos):
                         if event.button == 1:
                             background.update_point(0, 1, 0)

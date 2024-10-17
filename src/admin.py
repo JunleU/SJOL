@@ -27,11 +27,20 @@ class Admin(object):
         random.shuffle(cards)
         time.sleep(1)
         random.shuffle(cards)
+
+        conn.settimeout(0.01)
         for i in range(104):
+            try:
+                data = conn.recv(2)
+            except:
+                pass
             msg = 'a'
             msg += chr(card_dir.index(cards[i]))
             conn.send(msg.encode("UTF-8"))
             time.sleep(self.sleep_time)
+
+        conn.settimeout(None)
+
         while True:
             data = conn.recv(2)
             if data:
